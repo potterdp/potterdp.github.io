@@ -1,7 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculus Cougar Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    #chatbox { width: 400px; height: 500px; border: 1px solid #ccc; overflow-y: auto; padding: 10px; }
+    #userInput { width: 300px; }
+    #sendButton { width: 80px; }
+    .message { margin: 5px 0; }
+    .user { color: blue; }
+    .bot { color: green; }
+  </style>
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+
+<h2>Calculus Cougar Chat</h2>
+<div id="chatbox"></div>
+<input type="text" id="userInput" placeholder="Type your question here...">
+<button id="sendButton">Send</button>
+
+<script>
+async function sendMessage(message) {
+  const chatbox = document.getElementById('chatbox');
+  chatbox.innerHTML += `<div class="message user"><strong>You:</strong> ${message}</div>`;
+  document.getElementById('userInput').value = '';
+
+  try {
+    const response = await fetch('http://localhost:3000/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: message })
+    });
+
+    const data = await response.json();
+    chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> ${data.reply}</div>`;
+    chatbox.scrollTop = chatbox.scrollHeight;
+  } catch (err) {
+    chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> Sorry, there was an error connecting to the server.</div>`;
+  }
+}
+
+document.getElementById('sendButton').addEventListener('click', () => {
+  const message = document.getElementById('userInput').value;
+  if (message.trim() !== '') sendMessage(message);
+});
+
+document.getElementById('userInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') document.getElementById('sendButton').click();
+});
+</script>
+
 </body>
 </html>
