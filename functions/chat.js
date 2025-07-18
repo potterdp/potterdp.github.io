@@ -1,5 +1,3 @@
-const fetch = require('node-fetch');
-
 exports.handler = async (event, context) => {
   const { message } = JSON.parse(event.body);
 
@@ -22,17 +20,17 @@ exports.handler = async (event, context) => {
     });
 
     const data = await response.json();
-    console.log('OpenAI response:', data);
+    console.log('OpenAI response:', JSON.stringify(data));
 
-    const openaiReply = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+    const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ reply: openaiReply })
+      body: JSON.stringify({ reply })
     };
 
   } catch (err) {
-    console.error('Error from OpenAI or fetch:', err);
+    console.error('Error communicating with OpenAI:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error communicating with OpenAI' })

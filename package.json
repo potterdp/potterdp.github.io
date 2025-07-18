@@ -1,23 +1,10 @@
 {
-  "name": "potterdp.github.io",
+  "name": "calculuscougar",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/potterdp/potterdp.github.io.git"
-  },
-  "keywords": [],
-  "author": "",
+  "description": "Calculus Cougar Chatbot",
+  "main": "index.html",
+  "scripts": {},
+  "author": "Your Name",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/potterdp/potterdp.github.io/issues"
-  },
-  "homepage": "https://github.com/potterdp/potterdp.github.io#readme",
-  "description": "",
-  "dependencies": {
-    "node-fetch": "^3.3.2"
-  }
+  "dependencies": {}
 }

@@ -1,7 +1,9 @@
-[build]
-  functions = "functions"
-  publish = "."
-
-[dev]
-  functions = "functions"
-  publish = "."
+# [build]
+#   functions = "functions"
+#   publish = "."
+#
+# [dev]
+#   functions = "functions"
+#   publish = "."
+[build.environment]
+  NODE_VERSION = "18"
