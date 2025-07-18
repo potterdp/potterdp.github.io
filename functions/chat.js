@@ -1,9 +1,9 @@
-const fetch = require('node-fetch'); //include fetch, since not native in Netlify 
+const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
-  const { message } = JSON.parse(event.body);//reads the POSTed body from the frontend and extracts the message field
+  const { message } = JSON.parse(event.body);
 
-  try {//Makes a POST request to OpenAI’s Chat Completion endpoint with required secret API Key
+  try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -21,15 +21,18 @@ exports.handler = async (event, context) => {
       })
     });
 
-    //Receives response from chatbot.
     const data = await response.json();
+    console.log('OpenAI response:', data);
+
+    const openaiReply = data.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.';
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ reply: data.choices[0].message.content })
+      body: JSON.stringify({ reply: openaiReply })
     };
 
-  } catch (err) {//error handling
-    console.error(err);
+  } catch (err) {
+    console.error('Error from OpenAI or fetch:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error communicating with OpenAI' })
