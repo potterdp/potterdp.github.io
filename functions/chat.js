@@ -1,8 +1,15 @@
 // functions/chat.js
+import { createClient } from "@supabase/supabase-js";
 
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
-exports.handler = async (event, context) => {
+// Create Supabase client (URL + key must be set in Netlify env vars)
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export async function handler(event, context) {
   const { message, sessionId } = JSON.parse(event.body);
 
   // Initialize a session if none exists
@@ -26,23 +33,73 @@ exports.handler = async (event, context) => {
           - Keep tone patient, encouraging, supportive.
           - If a student seems stuck, give them a gentle nudge rather than the full solution immediately.
           - Share study strategies when useful.
-        `      
+        `   
       }
     ];
+  }
+
+  // 1. Embed the student’s question
+  let queryEmbedding;
+  try {
+    const embedResponse = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "text-embedding-3-small",
+        input: message
+      })
+    });
+    const embedData = await embedResponse.json();
+    queryEmbedding = embedData.data[0].embedding;
+  } catch (err) {
+    console.error("Error creating embedding:", err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: "Failed to create embedding" })
+    };
+  }
+
+  // 2. Query Supabase for top textbook chunks
+  let retrievedChunks = "";
+  try {
+    const { data, error } = await supabase.rpc("match_textbook_chunks", {
+      query_embedding: queryEmbedding,
+      match_count: 3 // number of chunks to retrieve
+    });
+
+    if (error) {
+      console.error("Supabase match error:", error);
+    } else if (data) {
+      retrievedChunks = data.map((row) => row.content).join("\n\n");
+    }
+  } catch (err) {
+    console.error("Error querying Supabase:", err);
+  }
+
+  // 3. Add system message with reference material
+  if (retrievedChunks) {
+    sessions[sessionId].push({
+      role: "system",
+      content: `Reference material from OpenStax:\n\n${retrievedChunks}`
+    });
   }
 
   // Add user message to history
   sessions[sessionId].push({ role: "user", content: message });
 
   try {
+    // Call OpenAI chat with context
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",  // better at reasoning than gpt-3.5
+        model: "gpt-4o-mini",
         messages: sessions[sessionId],
         temperature: 0.6,
         max_tokens: 500
@@ -50,25 +107,22 @@ exports.handler = async (event, context) => {
     });
 
     const data = await response.json();
-    console.log("OpenAI response:", JSON.stringify(data));
+    let reply =
+      data.choices?.[0]?.message?.content ||
+      "Sorry, I could not generate a response.";
 
-    let reply = data.choices?.[0]?.message?.content || "Sorry, I could not generate a response.";
-
-    // Normalize LaTeX delimiters
+    // Normalize math delimiters
     reply = reply
-      // Inline: \( ... \) → $ ... $
-      .replace(/\\\((.*?)\\\)/gs, '\$$1\$')
-      // Display: \[ ... \] → $$ ... $$
-      .replace(/\\\[(.*?)\\\]/gs, '\$\$$1\$\$');
-    
-    // Save assistant reply into session
+      .replace(/\\\((.*?)\\\)/gs, "\$$1\$")
+      .replace(/\\\[(.*?)\\\]/gs, "\$\$$1\$\$");
+
+    // Save assistant reply
     sessions[sessionId].push({ role: "assistant", content: reply });
 
     return {
       statusCode: 200,
       body: JSON.stringify({ reply })
     };
-
   } catch (err) {
     console.error("Error communicating with OpenAI:", err);
     return {
@@ -76,5 +130,4 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ error: "Error communicating with OpenAI" })
     };
   }
-};
-
+}
