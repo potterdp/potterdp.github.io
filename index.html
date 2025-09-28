@@ -187,8 +187,10 @@
 
   <div id="inputRow">
     <input type="text" id="userInput" placeholder="Ask me anything about calculus..." />
-    <button id="sendButton">📤 Send</button>
-    <button id="resetButton">🔄 Reset</button>
+    <!-- <button id="sendButton">📤 Send</button>
+    <button id="resetButton">🔄 Reset</button> -->
+    <button id="sendButton">Send</button>
+    <button id="resetButton">Reset</button>
   </div>
 
   <!--
@@ -231,7 +233,7 @@
         const response = await fetch('/.netlify/functions/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message, sessionId: sessionId }) // ✅ persistent sessionId
+          body: JSON.stringify({ message: message, sessionId: sessionId }) // persistent sessionId
         });
     
         const data = await response.json();
