@@ -149,13 +149,32 @@
       background-color: #880022;
       transform: scale(0.95);
     }
+
+    /* Display math spacing (MathJax) */
+    mjx-container[display="true"] {
+      margin: 1em 0;
+      text-align: center;
+    }
         
     @media (max-width: 600px) {
-      #chatbox, #inputContainer {
+      #chatbox, #inputRow {
         width: 90%;
       }
     }
   </style>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],   // support $...$ and \(...\)
+        displayMath: [['$$', '$$'], ['\\[', '\\]']] // support $$...$$ and \[...\]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+
+  <!-- MathJax loader -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 </head>
 <body>
 
