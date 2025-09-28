@@ -22,7 +22,9 @@
     #chatbox {
       width: 100%;
       max-width: 500px;
-      height: 500px;
+      min-height: 400px; 
+      height: auto; /*let it expand naturally */
+      max-height: 80vh; /*prevent runaway growth (80% of viewport height) */
       border: 2px solid #003366;
       background-color: #ffffff;
       border-radius: 10px;
