@@ -242,7 +242,9 @@
 
         // Re-render math in the new message
         if (window.MathJax) {
-          MathJax.typesetPromise();
+          MathJax.typesetClear();
+          MathJax.typesetPromise([chatbox]);
+          //MathJax.typesetPromise();
         }
         
       } catch (err) {
