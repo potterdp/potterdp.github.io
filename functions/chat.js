@@ -1,6 +1,7 @@
 // functions/chat.js
 import { createClient } from "@supabase/supabase-js";
 
+
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
 // Create Supabase client (URL + key must be set in Netlify env vars)
