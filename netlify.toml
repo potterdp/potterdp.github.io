@@ -1,6 +1,6 @@
-# [build]
-#   functions = "functions"
-#   publish = "."
+ [build]
+   functions = "functions"
+   publish = "."
 #
 # [dev]
 #   functions = "functions"
