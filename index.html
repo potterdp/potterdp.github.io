@@ -110,20 +110,34 @@
     <button id="sendButton">Send</button>
   </div>
 
+  <!-- Reset button goes here -->
+  <div id="resetContainer" style="margin-top: 10px;">
+    <button id="resetButton">Reset Conversation</button>
+  </div>
+
   <script>
+    // Try to load an existing session ID from localStorage
+    let sessionId = localStorage.getItem("cougarSessionId");
+  
+    // If none exists, create one and save it
+    if (!sessionId) {
+      sessionId = Math.random().toString(36).substring(2, 15);
+      localStorage.setItem("cougarSessionId", sessionId);
+    }
+  
     async function sendMessage(message) {
       const chatbox = document.getElementById('chatbox');
       chatbox.innerHTML += `<div class="message user"><strong>You:</strong> ${message}</div>`;
       document.getElementById('userInput').value = '';
       chatbox.scrollTop = chatbox.scrollHeight;
-
+    
       try {
         const response = await fetch('/.netlify/functions/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: message })
+          body: JSON.stringify({ message: message, sessionId: sessionId }) // ✅ persistent sessionId
         });
-
+    
         const data = await response.json();
         chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> ${data.reply}</div>`;
         chatbox.scrollTop = chatbox.scrollHeight;
@@ -132,16 +146,34 @@
         chatbox.scrollTop = chatbox.scrollHeight;
       }
     }
-
+  
+    // Send button click
     document.getElementById('sendButton').addEventListener('click', () => {
       const message = document.getElementById('userInput').value;
       if (message.trim() !== '') sendMessage(message);
     });
-
+  
+    // Enter key press
     document.getElementById('userInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') document.getElementById('sendButton').click();
     });
-  </script>
+  
+    // Reset button click
+    document.getElementById('resetButton').addEventListener('click', () => {
+    // Clear session from localStorage
+    localStorage.removeItem("cougarSessionId");
+
+    // Generate a new one
+    sessionId = Math.random().toString(36).substring(2, 15);
+    localStorage.setItem("cougarSessionId", sessionId);
+
+    // Clear the chatbox
+    document.getElementById('chatbox').innerHTML = '';
+
+    // Optional: add a system message
+    document.getElementById('chatbox').innerHTML = `<div class="message bot"><strong>Cougar:</strong> Conversation reset. Let's start fresh!</div>`;
+  });
+</script>
 
 </body>
 </html>
