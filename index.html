@@ -175,7 +175,9 @@
 
   <!-- MathJax loader -->
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  
 </head>
+  
 <body>
 
   <h2>Calculus Cougar Chat</h2>
@@ -235,11 +237,15 @@
         const data = await response.json();
         chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> ${data.reply}</div>`;
         scrollChatToBottom();
-        //chatbox.scrollTop = chatbox.scrollHeight;
+        
       } catch (err) {
         chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> Sorry, there was an error connecting to the server.</div>`;
         scrollChatToBottom();
-        //chatbox.scrollTop = chatbox.scrollHeight;
+
+        // Re-render math in the new message
+        if (window.MathJax) {
+          MathJax.typesetPromise();
+        }
       }
     }
   
