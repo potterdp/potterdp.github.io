@@ -52,7 +52,7 @@ exports.handler = async (event, context) => {
     const data = await response.json();
     console.log("OpenAI response:", JSON.stringify(data));
 
-    const reply = data.choices?.[0]?.message?.content || "Sorry, I could not generate a response.";
+    let reply = data.choices?.[0]?.message?.content || "Sorry, I could not generate a response.";
 
     // Normalize LaTeX delimiters
     reply = reply
