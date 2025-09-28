@@ -22,13 +22,11 @@
     #chatbox {
       width: 100%;
       max-width: 500px;
-      min-height: 400px; 
-      height: auto; /*let it expand naturally */
-      max-height: 80vh; /*prevent runaway growth (80% of viewport height) */
+      height: 450px;             /* 👈 fixed height */
       border: 2px solid #003366;
       background-color: #ffffff;
       border-radius: 10px;
-      overflow-y: auto;
+      overflow-y: auto;          /* 👈 scroll when too many messages */
       padding: 15px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       margin-bottom: 15px;
