@@ -22,11 +22,11 @@
     #chatbox {
       width: 100%;
       max-width: 500px;
-      height: 450px;             /* 👈 fixed height */
+      height: 450px;             /*  fixed height */
       border: 2px solid #003366;
       background-color: #ffffff;
       border-radius: 10px;
-      overflow-y: auto;          /* 👈 scroll when too many messages */
+      overflow-y: auto;          /*  scroll when too many messages */
       padding: 15px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
       margin-bottom: 15px;
@@ -120,6 +120,31 @@
       background-color: #880022;
       transform: scale(0.98);
     }
+    
+    #scrollButton {
+      position: relative;   /* stays in flow, right below chatbox */
+      margin: 5px auto 10px auto;
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      background-color: #003366;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    #scrollButton:hover {
+      background-color: #0055aa;
+      transform: scale(1.05);
+    }
+    
+    #scrollButton:active {
+      background-color: #002244;
+      transform: scale(0.95);
+    }
+    
     @media (max-width: 600px) {
       #chatbox, #inputContainer {
         width: 90%;
@@ -132,6 +157,9 @@
   <h2>Calculus Cougar Chat</h2>
   <div id="chatbox"></div>
 
+  <!-- Scroll to latest button -->
+  <button id="scrollButton" style="display: none;">⬇️ New Messages</button>
+
   <div id="inputContainer">
     <input type="text" id="userInput" placeholder="Ask me anything about calculus..." />
     <button id="sendButton">Send</button>
@@ -139,7 +167,7 @@
 
   <!-- Reset button goes here -->
   <div id="resetContainer" style="margin-top: 10px;">
-    <button id="resetButton">Reset Conversation</button>
+    <button id="resetButton">🔄 Reset Conversation</button>
   </div>
 
   <script>
