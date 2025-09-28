@@ -54,6 +54,13 @@ exports.handler = async (event, context) => {
 
     const reply = data.choices?.[0]?.message?.content || "Sorry, I could not generate a response.";
 
+    // Normalize LaTeX delimiters
+    reply = reply
+      // Inline: \( ... \) → $ ... $
+      .replace(/\\\((.*?)\\\)/gs, '\$$1\$')
+      // Display: \[ ... \] → $$ ... $$
+      .replace(/\\\[(.*?)\\\]/gs, '\$\$$1\$\$');
+    
     // Save assistant reply into session
     sessions[sessionId].push({ role: "assistant", content: reply });
 
