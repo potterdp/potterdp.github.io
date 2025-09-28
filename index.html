@@ -93,6 +93,33 @@
       background-color: #0055aa;
     }
 
+    #resetContainer {
+      margin-top: 12px;
+      display: flex;
+      justify-content: center;
+    }
+
+    #resetButton {
+      padding: 12px 20px;   /* same size as #sendButton */
+      font-size: 1rem;
+      background-color: #aa0033;   /* deep red for contrast */
+      color: white;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    #resetButton:hover {
+      background-color: #cc0044;
+      transform: scale(1.05);
+    }
+    
+    #resetButton:active {
+      background-color: #880022;
+      transform: scale(0.98);
+    }
     @media (max-width: 600px) {
       #chatbox, #inputContainer {
         width: 90%;
