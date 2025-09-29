@@ -1,6 +1,17 @@
 // functions/chat.js
 import { createClient } from "@supabase/supabase-js";
 
+function sanitizeChunk(text) {
+  return text
+    .replace(/\bfunction\s+1\b/gi, "function f")
+    .replace(/\bcontinuous function 1\b/gi, "continuous function f")
+    .replace(/\binterval\s+1\b/gi, "interval [a,b]")
+    .replace(/\bvalue\s+1\b/gi, "value c")
+    .replace(/\bTheorem\s*1\b/gi, "Theorem")
+    .replace(/\*\*/g, "")    // strip markdown bold
+    .replace(/##+/g, "");    // strip markdown headers
+}
+
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
 // Create Supabase client (URL + key must be set in Netlify env vars)
@@ -75,7 +86,7 @@ export async function handler(event, context) {
     } else if (data) {
       // include page numbers in reference material
       retrievedChunks = data
-        .map((row) => `From page ${row.page}:\n${row.content}`)
+        .map((row) => `From page ${row.page}:\n${sanitizeChunk(row.content)}`)
         .join("\n\n");
     }
   } catch (err) {
