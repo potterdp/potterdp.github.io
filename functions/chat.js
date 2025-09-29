@@ -130,6 +130,9 @@ export async function handler(event, context) {
       .replace(/\\\((.*?)\\\)/gs, "\$$1\$")
       .replace(/\\\[(.*?)\\\]/gs, "\$\$$1\$\$");
 
+    // Second-pass sanitizer
+    reply = sanitizeChunk(reply);
+    
     // Save assistant reply
     sessions[sessionId].push({ role: "assistant", content: reply });
 
