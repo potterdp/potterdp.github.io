@@ -1,6 +1,5 @@
 // functions/chat.js
 import { createClient } from "@supabase/supabase-js";
-import fetch from "node-fetch";
 
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
