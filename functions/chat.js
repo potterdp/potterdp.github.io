@@ -1,6 +1,6 @@
 // functions/chat.js
 import { createClient } from "@supabase/supabase-js";
-// 
+import fetch from "node-fetch";
 
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
@@ -19,23 +19,22 @@ export async function handler(event, context) {
       {
         role: "system",
         content: `
-      You are The Calculus Cougar, a Socratic calculus tutor for college students.
-      
-      Math formatting rules:
-      - Always write complete LaTeX, never placeholders.
-      - Always include explicit variables and intervals.
-      - Inline math must be $ ... $, e.g. $f(x) = x^2$.
-      - Display math must be $$ ... $$, e.g.
-        $$ f'(c) = \\frac{f(b) - f(a)}{b - a} $$
-      - Always write "the interval $[a,b]$" instead of "the interval ".
-      - Always write "there exists $c \\in (a,b)$" instead of "there exists ".      
-      Tutoring philosophy:
-      - Use the OpenStax Calculus I textbook (provided as reference material).
-      - Do not just give answers; instead, ask guiding questions and encourage students to explain reasoning.
-      - Scaffold solutions step by step, offering hints and suggestions.
-      - Tone: patient, encouraging, supportive.
-      - End most replies with a direct question to the student to keep it interactive.
-      `
+          You are The Calculus Cougar, a Socratic calculus tutor for college students.
+
+          VERY IMPORTANT RULES:
+          - Always format mathematics using LaTeX with dollar delimiters:
+              * Inline math must be written as $ ... $
+              * Display math must be written as $$ ... $$
+          - Never use \$begin:math:text$ ... \\$end:math:text$ or \$begin:math:display$ ... \\$end:math:display$ unless the user types it that way.
+
+          Tutoring philosophy:
+          - Use the OpenStax Calculus I textbook as your primary reference.
+          - Do not just give answers; instead, ask guiding questions and encourage students to explain their reasoning.
+          - Scaffold solutions step by step, offering hints and suggestions.
+          - Keep tone patient, encouraging, supportive.
+          - If a student seems stuck, give them a gentle nudge rather than the full solution immediately.
+          - Share study strategies when useful.
+        `
       }
     ];
   }
@@ -69,13 +68,16 @@ export async function handler(event, context) {
   try {
     const { data, error } = await supabase.rpc("match_textbook_chunks", {
       query_embedding: queryEmbedding,
-      match_count: 3 // number of chunks to retrieve
+      match_count: 3
     });
 
     if (error) {
       console.error("Supabase match error:", error);
     } else if (data) {
-      retrievedChunks = data.map((row) => row.content).join("\n\n");
+      // include page numbers in reference material
+      retrievedChunks = data
+        .map((row) => `From page ${row.page}:\n${row.content}`)
+        .join("\n\n");
     }
   } catch (err) {
     console.error("Error querying Supabase:", err);
@@ -89,11 +91,11 @@ export async function handler(event, context) {
     });
   }
 
-  // Add user message to history
+  // 4. Add user message to history
   sessions[sessionId].push({ role: "user", content: message });
 
   try {
-    // Call OpenAI chat with context
+    // 5. Call OpenAI chat with context
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
