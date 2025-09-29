@@ -6,4 +6,4 @@
 #   functions = "functions"
 #   publish = "."
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
