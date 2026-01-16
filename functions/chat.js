@@ -2,15 +2,45 @@
 import { createClient } from "@supabase/supabase-js";
 
 function sanitizeChunk(text) {
-  return text
+  return (text || "")
+    // Fix OpenStax ligature artifacts that look like trig
+    .replace(/\\sin\s*ce\b/gi, "since")
+    .replace(/u\\sin\s*g\b/gi, "using")
+    .replace(/ins\\tan\s*ce\b/gi, "instance")
+
+    // Fix the most common OCR “1” placeholders (only in retrieved text)
+    .replace(/\bcontinuous function\s+1\b/gi, "continuous function f")
     .replace(/\bfunction\s+1\b/gi, "function f")
-    .replace(/\bcontinuous function 1\b/gi, "continuous function f")
     .replace(/\binterval\s+1\b/gi, "interval [a,b]")
     .replace(/\bvalue\s+1\b/gi, "value c")
     .replace(/\bTheorem\s*1\b/gi, "Theorem")
-    .replace(/\*\*/g, "")    // strip markdown bold
-    .replace(/##+/g, "");    // strip markdown headers
+
+    // Strip markdown-ish noise if it slips in
+    .replace(/\*\*/g, "")
+    .replace(/^\s*#{1,6}\s*/gm, "")
+
+    // Remove common OpenStax footer/URL noise
+    .replace(/This OpenStax book is available for free at\s+https?:\/\/\S+/gi, "")
+    .replace(/Download for free at\s+https?:\/\/\S+/gi, "")
+
+    // Normalize weird replacement chars
+    .replace(/\uFFFD/g, "")
+
+    // Normalize whitespace
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
+//function sanitizeChunk(text) {
+//  return text
+//    .replace(/\bfunction\s+1\b/gi, "function f")
+//    .replace(/\bcontinuous function 1\b/gi, "continuous function f")
+//    .replace(/\binterval\s+1\b/gi, "interval [a,b]")
+//    .replace(/\bvalue\s+1\b/gi, "value c")
+//    .replace(/\bTheorem\s*1\b/gi, "Theorem")
+//    .replace(/\*\*/g, "")    // strip markdown bold
+//    .replace(/##+/g, "");    // strip markdown headers
+//}
 
 let sessions = {}; // In-memory session storage (resets on redeploy)
 
@@ -76,7 +106,7 @@ export async function handler(event, context) {
   // 2. Query Supabase for top textbook chunks
   let retrievedChunks = "";
   try {
-    const { data, error } = await supabase.rpc("match_textbook_chunks", {
+    const { data, error } = await supabase.rpc("match_textbook_chunks_v2", {
       query_embedding: queryEmbedding,
       match_count: 3
     });
@@ -97,7 +127,13 @@ export async function handler(event, context) {
   if (retrievedChunks) {
     sessions[sessionId].push({
       role: "system",
-      content: `Reference material from OpenStax:\n\n${retrievedChunks}`
+      content: `REFERENCE EXCERPTS (OpenStax Calculus Vol. 1):
+      - Use these excerpts ONLY as grounding.
+      - If notation looks corrupted, rewrite it into clean LaTeX before presenting it.
+      - Do not copy OCR artifacts (examples: "\\sin ce", "u\\sin g", "ins\\tan ce") into your response.
+
+      ${retrievedChunks}`
+      //content: `Reference material from OpenStax:\n\n${retrievedChunks}`
     });
   }
 
@@ -125,13 +161,14 @@ export async function handler(event, context) {
       data.choices?.[0]?.message?.content ||
       "Sorry, I could not generate a response.";
 
-    // Normalize math delimiters
-    reply = reply
-      .replace(/\\\((.*?)\\\)/gs, "\$$1\$")
-      .replace(/\\\[(.*?)\\\]/gs, "\$\$$1\$\$");
 
-    // Second-pass sanitizer
-    reply = sanitizeChunk(reply);
+    //// Normalize math delimiters
+    //reply = reply
+    //  .replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$')
+    //  .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$1$$');
+    //
+    //// Second-pass sanitizer
+    //reply = sanitizeChunk(reply);
     
     // Save assistant reply
     sessions[sessionId].push({ role: "assistant", content: reply });
