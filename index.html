@@ -1,89 +1,315 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Calculus Cougar Chat</title>
+
   <style>
-    body { font-family: Arial, sans-serif; }
-    #chatbox { width: 400px; height: 500px; border: 1px solid #ccc; overflow-y: auto; padding: 10px; }
-    #userInput { width: 300px; }
-    #sendButton { width: 80px; }
-    .message { margin: 5px 0; }
-    .user { color: blue; }
-    .bot { color: green; }
-  </style>
-</head>
-<body>
-
-<h2>Calculus Cougar Chat</h2>
-<div id="chatbox"></div>
-<input type="text" id="userInput" placeholder="Type your question here...">
-<button id="sendButton">Send</button>
-
-<script>
-function getOrCreateSessionId() {
-  const key = "cougar_session_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
-  }
-  return id;
-}
-
-const sessionId = getOrCreateSessionId();
-
-// Optional: set this on different Canvas pages/modules by editing this line.
-// Examples: "guided_notes", "lab", "exam_prep", "free_use"
-
-function getContext() {
-  const params = new URLSearchParams(window.location.search);
-  const ctx = params.get("context");
-  const allowed = new Set(["guided_notes", "lab", "exam_prep", "free_use"]);
-  return allowed.has(ctx) ? ctx : "free_use";
-}
-
-const COUGAR_CONTEXT = getContext();
-async function sendMessage(message) {
-  const chatbox = document.getElementById('chatbox');
-  chatbox.innerHTML += `<div class="message user"><strong>You:</strong> ${message}</div>`;
-  document.getElementById('userInput').value = '';
-
-  try {
-    // Netlify Functions endpoint
-    const response = await fetch('/.netlify/functions/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: message,
-        sessionId: sessionId,
-        context: COUGAR_CONTEXT
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data?.error || "Server error");
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
     }
 
-    chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> ${data.reply}</div>`;
-    chatbox.scrollTop = chatbox.scrollHeight;
-  } catch (err) {
-    chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> Sorry, there was an error connecting to the server.</div>`;
-  }
-}
+    h2 {
+      color: #003366;
+      margin-bottom: 10px;
+    }
 
-document.getElementById('sendButton').addEventListener('click', () => {
-  const message = document.getElementById('userInput').value;
-  if (message.trim() !== '') sendMessage(message);
-});
+    #chatbox {
+      width: 100%;
+      max-width: 500px;
+      height: 450px;
+      border: 2px solid #003366;
+      background-color: #ffffff;
+      border-radius: 10px;
+      overflow-y: auto;
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      position: relative;
+    }
 
-document.getElementById('userInput').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') document.getElementById('sendButton').click();
-});
-</script>
+    #scrollButton {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      padding: 8px 12px;
+      font-size: 1.2rem;
+      background-color: #003366;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: background-color 0.3s, transform 0.2s;
+      z-index: 10;
+      display: none;
+    }
+
+    #scrollButton:hover {
+      background-color: #0055aa;
+      transform: scale(1.1);
+    }
+
+    #scrollButton:active {
+      background-color: #002244;
+      transform: scale(0.95);
+    }
+
+    .message {
+      margin: 8px 0;
+      padding: 10px 15px;
+      border-radius: 15px;
+      max-width: 80%;
+      clear: both;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .user {
+      background-color: #e0f0ff;
+      color: #003366;
+      float: right;
+      border-bottom-right-radius: 0;
+    }
+
+    .bot {
+      background-color: #f0fff4;
+      color: #006400;
+      float: left;
+      border-bottom-left-radius: 0;
+    }
+
+    #inputRow {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      max-width: 500px;
+      gap: 10px;
+      margin-top: 5px;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 12px 15px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 25px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    #userInput:focus {
+      border-color: #003366;
+    }
+
+    #sendButton,
+    #resetButton {
+      padding: 16px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+
+    #sendButton {
+      background-color: #003366;
+      color: white;
+    }
+
+    #sendButton:hover {
+      background-color: #0055aa;
+      transform: scale(1.05);
+    }
+
+    #sendButton:active {
+      background-color: #002244;
+      transform: scale(0.95);
+    }
+
+    #resetButton {
+      background-color: #aa0033;
+      color: white;
+    }
+
+    #resetButton:hover {
+      background-color: #cc0044;
+      transform: scale(1.05);
+    }
+
+    #resetButton:active {
+      background-color: #880022;
+      transform: scale(0.95);
+    }
+
+    /* Display math spacing (MathJax) */
+    mjx-container[display="true"] {
+      margin: 1em 0;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      #chatbox, #inputRow {
+        width: 90%;
+      }
+    }
+  </style>
+
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+
+<body>
+
+  <h2>Calculus Cougar Chat</h2>
+
+  <div id="chatbox">
+    <button id="scrollButton" title="Scroll to bottom">⬇️</button>
+  </div>
+
+  <div id="inputRow">
+    <input type="text" id="userInput" placeholder="Ask me anything about calculus..." />
+    <button id="sendButton">📤 Send</button>
+    <button id="resetButton">🔄 Reset</button>
+  </div>
+
+  <script>
+    // --- Session ID (stable per browser unless reset) ---
+    function getOrCreateSessionId() {
+      const key = "cougar_session_id";
+      let id = localStorage.getItem(key);
+      if (!id) {
+        id = crypto.randomUUID();
+        localStorage.setItem(key, id);
+      }
+      return id;
+    }
+
+    function resetSessionId() {
+      const key = "cougar_session_id";
+      localStorage.removeItem(key);
+      const id = crypto.randomUUID();
+      localStorage.setItem(key, id);
+      return id;
+    }
+
+    let sessionId = getOrCreateSessionId();
+
+    // --- Context tag (from URL: ?context=guided_notes|lab|exam_prep|free_use) ---
+    function getContext() {
+      const params = new URLSearchParams(window.location.search);
+      const ctx = params.get("context");
+      const allowed = new Set(["guided_notes", "lab", "exam_prep", "free_use"]);
+      return allowed.has(ctx) ? ctx : "free_use";
+    }
+    const COUGAR_CONTEXT = getContext();
+
+    // --- UI helpers ---
+    function scrollChatToBottom() {
+      const chatbox = document.getElementById('chatbox');
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+
+    function shouldShowScrollButton() {
+      const chatbox = document.getElementById('chatbox');
+      const btn = document.getElementById('scrollButton');
+      const nearBottom = (chatbox.scrollHeight - chatbox.scrollTop - chatbox.clientHeight) < 80;
+      btn.style.display = nearBottom ? "none" : "block";
+    }
+
+    document.getElementById('chatbox').addEventListener('scroll', shouldShowScrollButton);
+    document.getElementById('scrollButton').addEventListener('click', scrollChatToBottom);
+
+    async function typesetMath() {
+      const chatbox = document.getElementById('chatbox');
+      if (window.MathJax) {
+        MathJax.typesetClear();
+        await MathJax.typesetPromise([chatbox]);
+      }
+    }
+
+    async function sendMessage(message) {
+      const chatbox = document.getElementById('chatbox');
+
+      chatbox.innerHTML += `<div class="message user"><strong>You:</strong> ${message}</div>`;
+      document.getElementById('userInput').value = '';
+      scrollChatToBottom();
+
+      try {
+        const response = await fetch('/.netlify/functions/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: message,
+            sessionId: sessionId,
+            context: COUGAR_CONTEXT
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.error || `Server error (${response.status})`);
+        }
+
+        chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> ${data.reply}</div>`;
+        scrollChatToBottom();
+
+        await typesetMath();
+        shouldShowScrollButton();
+      } catch (err) {
+        chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> Sorry, there was an error connecting to the server.</div>`;
+        scrollChatToBottom();
+        shouldShowScrollButton();
+      }
+    }
+
+    document.getElementById('sendButton').addEventListener('click', () => {
+      const message = document.getElementById('userInput').value;
+      if (message.trim() !== '') sendMessage(message);
+    });
+
+    document.getElementById('userInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') document.getElementById('sendButton').click();
+    });
+
+    document.getElementById('resetButton').addEventListener('click', async () => {
+      // New pseudonymous session for logging
+      sessionId = resetSessionId();
+
+      // Clear the chatbox (but keep the scroll button)
+      const chatbox = document.getElementById('chatbox');
+      chatbox.innerHTML = `<button id="scrollButton" title="Scroll to bottom">⬇️</button>`;
+      document.getElementById('scrollButton').style.display = "none";
+      document.getElementById('scrollButton').addEventListener('click', scrollChatToBottom);
+
+      chatbox.innerHTML += `<div class="message bot"><strong>Cougar:</strong> Conversation reset. Let's start fresh!</div>`;
+      scrollChatToBottom();
+
+      await typesetMath();
+    });
+
+    // Initial state
+    shouldShowScrollButton();
+  </script>
 
 </body>
 </html>
