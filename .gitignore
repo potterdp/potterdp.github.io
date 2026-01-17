@@ -1,2 +1,19 @@
-functions/chat_old.js
-functions/chat_old.js
+#Archived files
+Archive/
+
+# environment / secrets
+.env
+*.env
+.env.*
+calculus-cougar.env
+
+# node
+node_modules/
+npm-debug.log*
+
+# netlify local state
+.netlify/
+
+# macOS
+.DS_Store
+
