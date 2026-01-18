@@ -1,6 +1,10 @@
 // functions/chat.js
 import { createClient } from "@supabase/supabase-js";
 
+// If client doesn't send a defaultBook, fall back here:
+const FALLBACK_DEFAULT_BOOK = "calculus_unbound";
+const OPENSTAX_BOOK_SLUG = "openstax_calc1"; // <-- change if your OpenStax book slug differs
+
 function sanitizeChunk(text) {
   return (text || "")
     .replace(/\\sin\s*ce\b/gi, "since")
@@ -19,6 +23,25 @@ function sanitizeChunk(text) {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+// Hybrid selector: default book from client, override via user message
+function resolveBook(message, defaultBook) {
+  const raw = (message || "").trim();
+
+  // Override patterns (keep simple + explicit to avoid accidental triggers)
+  const openstaxCmd = /^\s*(\/openstax\b|search\s+openstax\s*:|openstax\s*:)/i;
+  const unboundCmd  = /^\s*(\/unbound\b|search\s+unbound\s*:|unbound\s*:|search\s+calculus\s*unbound\s*:|calculus\s*unbound\s*:)/i;
+
+  if (openstaxCmd.test(raw)) {
+    const cleaned = raw.replace(openstaxCmd, "").trim();
+    return { book: OPENSTAX_BOOK_SLUG, cleanedMessage: cleaned || raw };
+  }
+  if (unboundCmd.test(raw)) {
+    const cleaned = raw.replace(unboundCmd, "").trim();
+    return { book: "calculus_unbound", cleanedMessage: cleaned || raw };
+  }
+  return { book: defaultBook, cleanedMessage: raw };
 }
 
 let sessions = {}; // In-memory session storage (resets on redeploy)
@@ -55,7 +78,7 @@ export async function handler(event, context) {
     return withCors(400, { error: "Invalid JSON body" });
   }
 
-  const { message, sessionId, context: usageContext } = parsed;
+  const { message, sessionId, context: usageContext, defaultBook } = parsed;
 
   if (!message || typeof message !== "string") {
     return withCors(400, { error: "Missing or invalid 'message'" });
@@ -67,6 +90,13 @@ export async function handler(event, context) {
   const ctxTag = (usageContext && typeof usageContext === "string")
     ? usageContext
     : "free_use";
+
+  const clientDefaultBook =
+    (typeof defaultBook === "string" && defaultBook.trim())
+      ? defaultBook.trim()
+      : FALLBACK_DEFAULT_BOOK;
+
+  const { book: bookFilter, cleanedMessage } = resolveBook(message, clientDefaultBook);
 
   // Initialize a session if none exists
   if (!sessions[sessionId]) {
@@ -83,7 +113,7 @@ VERY IMPORTANT RULES:
 - Never use \\$begin:math:text$ ... \\\\$end:math:text$ or \\$begin:math:display$ ... \\\\$end:math:display$ unless the user types it that way.
 
 Tutoring philosophy:
-- Use the OpenStax Calculus I textbook as your primary reference.
+- Use the provided REFERENCE EXCERPTS as your primary grounding source.
 - Do not just give answers; instead, ask guiding questions and encourage students to explain their reasoning.
 - Scaffold solutions step by step, offering hints and suggestions.
 - Keep tone patient, encouraging, supportive.
@@ -94,7 +124,7 @@ Tutoring philosophy:
     ];
   }
 
-  // 1) Embed the student’s question
+  // 1) Embed the student’s question (use cleanedMessage so prefixes don't pollute embeddings)
   let queryEmbedding;
   try {
     const embedResponse = await fetch("https://api.openai.com/v1/embeddings", {
@@ -105,7 +135,7 @@ Tutoring philosophy:
       },
       body: JSON.stringify({
         model: "text-embedding-3-small",
-        input: message
+        input: cleanedMessage
       })
     });
     const embedData = await embedResponse.json();
@@ -116,19 +146,23 @@ Tutoring philosophy:
     return withCors(500, { error: "Failed to create embedding" });
   }
 
-  // 2) Query Supabase for top textbook chunks
+  // 2) Query Supabase for top textbook chunks (FILTERED by selected book)
   let retrievedChunks = "";
   try {
     const { data, error } = await supabase.rpc("match_textbook_chunks_v2", {
       query_embedding: queryEmbedding,
-      match_count: 3
+      match_count: 3,
+      book_filter: bookFilter
     });
 
     if (error) {
       console.error("Supabase match error:", error);
     } else if (data) {
       retrievedChunks = data
-        .map((row) => `From page ${row.page}:\n${sanitizeChunk(row.content)}`)
+        .map((row) => {
+          const pageLabel = row.page ? `From page ${row.page}:` : "From the text:";
+          return `${pageLabel}\n${sanitizeChunk(row.content)}`;
+        })
         .join("\n\n");
     }
   } catch (err) {
@@ -137,9 +171,14 @@ Tutoring philosophy:
 
   // 3) Add system message with reference material
   if (retrievedChunks) {
+    const sourceLabel =
+      bookFilter === "calculus_unbound" ? "Calculus Unbound" :
+      bookFilter === OPENSTAX_BOOK_SLUG ? "OpenStax Calculus I" :
+      bookFilter;
+
     sessions[sessionId].push({
       role: "system",
-      content: `REFERENCE EXCERPTS (OpenStax Calculus Vol. 1):
+      content: `REFERENCE EXCERPTS (${sourceLabel}):
 - Use these excerpts ONLY as grounding.
 - If notation looks corrupted, rewrite it into clean LaTeX before presenting it.
 - Do not copy OCR artifacts (examples: "\\sin ce", "u\\sin g", "ins\\tan ce") into your response.
@@ -148,8 +187,8 @@ ${retrievedChunks}`.trim()
     });
   }
 
-  // 4) Add user message to history
-  sessions[sessionId].push({ role: "user", content: message });
+  // 4) Add user message to history (cleaned)
+  sessions[sessionId].push({ role: "user", content: cleanedMessage });
 
   // 4b) Log user message (don’t fail the chat if logging fails)
   try {
@@ -157,7 +196,9 @@ ${retrievedChunks}`.trim()
       session_id: sessionId,
       context: ctxTag,
       role: "user",
-      content: message
+      content: cleanedMessage
+      // Optional: if your chat_logs table has a "book" column, log it:
+      // book: bookFilter
     });
     if (logUserErr) console.error("Error logging user message:", logUserErr);
   } catch (e) {
@@ -195,6 +236,7 @@ ${retrievedChunks}`.trim()
         context: ctxTag,
         role: "assistant",
         content: reply
+        // Optional: book: bookFilter
       });
       if (logAsstErr) console.error("Error logging assistant reply:", logAsstErr);
     } catch (e) {
